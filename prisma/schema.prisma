@@ -1,0 +1,28 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model notice_visibilities {
+  notice_visibility_id        Int      @id @default(autoincrement())
+  notice_id                   Int
+  teacher_id                  Int
+  notice_visibility_viewed_in DateTime @default(now()) @db.Timestamp(0)
+  notices                     notices  @relation(fields: [notice_id], references: [notice_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_notice_visibilities_key_1")
+
+  @@index([notice_id], map: "fk_notice_visibilities_key_1_idx")
+}
+
+model notices {
+  notice_id           Int                   @id @default(autoincrement())
+  notice_title        String                @db.VarChar(45)
+  notice_content      String                @db.VarChar(255)
+  notice_date         DateTime              @db.Date
+  notice_status       Int
+  notice_priority     Int
+  notice_visibilities notice_visibilities[]
+}
