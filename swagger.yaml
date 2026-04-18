@@ -1,0 +1,390 @@
+openapi: 3.0.0
+info:
+  title: API do SchoolManager - NoticeService
+  description: |
+    Serviço de Gestão de Avisos e Visibilidade.
+    Permite que administradores publiquem avisos e controlem a visualização por professores.
+  version: 1.0.0
+  contact:
+    name: Suporte SchoolManager
+    email: suporte@schoolmanager.com
+
+servers:
+  - url: http://localhost:3006/api
+    description: Servidor de Desenvolvimento
+
+tags:
+  - name: Health
+    description: Verificação de saúde do serviço
+  - name: Notices
+    description: CRUD de avisos (apenas ADMIN)
+  - name: TeacherNotices
+    description: Visualização de avisos por professores (marcar como lido, listar)
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Notice:
+      type: object
+      properties:
+        notice_id:
+          type: integer
+          example: 1
+        notice_title:
+          type: string
+          example: "Reunião de pais"
+        notice_content:
+          type: string
+          example: "Reunião no auditório às 19h."
+        notice_date:
+          type: string
+          format: date
+          example: "2026-04-18"
+        notice_status:
+          type: integer
+          enum: [0, 1, 2]
+          description: "1=ativo, 0=inativo, 2=deletado"
+          example: 1
+        notice_priority:
+          type: integer
+          enum: [1, 2, 3, 4]
+          description: "1=baixa, 2=média, 3=alta, 4=urgente"
+          example: 2
+        notice_visibilities:
+          type: array
+          items:
+            $ref: '#/components/schemas/NoticeVisibility'
+
+    NoticeVisibility:
+      type: object
+      properties:
+        notice_visibility_id:
+          type: integer
+        notice_id:
+          type: integer
+        teacher_id:
+          type: integer
+        notice_visibility_viewed_in:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+    ListNoticesResponse:
+      type: object
+      properties:
+        notices:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notice'
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    TeacherNotice:
+      type: object
+      properties:
+        notice_id:
+          type: integer
+        notice_title:
+          type: string
+        notice_content:
+          type: string
+        notice_date:
+          type: string
+          format: date
+        notice_priority:
+          type: integer
+        viewed:
+          type: boolean
+          description: "Indica se o professor já visualizou o aviso"
+
+paths:
+  # ==================== HEALTH ====================
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Verifica saúde do serviço
+      responses:
+        '200':
+          description: Serviço operacional
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "OK"
+                  service:
+                    type: string
+                    example: "notice-service"
+
+  # ==================== AVISOS (CRUD - ADMIN) ====================
+  /notices/listNotices:
+    get:
+      tags:
+        - Notices
+      summary: Lista avisos com paginação e filtros
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: notice_title
+          in: query
+          schema:
+            type: string
+        - name: notice_status
+          in: query
+          schema:
+            type: integer
+            enum: [0, 1, 2]
+        - name: notice_priority
+          in: query
+          schema:
+            type: integer
+            enum: [1, 2, 3, 4]
+      responses:
+        '200':
+          description: Lista de avisos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListNoticesResponse'
+        '401':
+          description: Token inválido
+        '403':
+          description: Acesso negado (requer ADMIN)
+
+  /notices/listNoticeById/{id}:
+    get:
+      tags:
+        - Notices
+      summary: Busca aviso por ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Dados do aviso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notice'
+        '404':
+          description: Aviso não encontrado
+
+  /notices/createNotice:
+    post:
+      tags:
+        - Notices
+      summary: Cria um novo aviso (apenas ADMIN)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - notice_title
+                - notice_content
+              properties:
+                notice_title:
+                  type: string
+                  maxLength: 45
+                  example: "Reunião de pais"
+                notice_content:
+                  type: string
+                  maxLength: 255
+                  example: "Reunião no auditório às 19h."
+                notice_date:
+                  type: string
+                  format: date
+                  example: "2026-04-18"
+                notice_status:
+                  type: integer
+                  default: 1
+                  enum: [0, 1, 2]
+                notice_priority:
+                  type: integer
+                  default: 2
+                  enum: [1, 2, 3, 4]
+                teacher_ids:
+                  type: array
+                  description: "Lista opcional de IDs de professores que terão visibilidade restrita. Se não enviado, aviso visível a todos."
+                  items:
+                    type: integer
+                    example: [5, 8, 12]
+      responses:
+        '201':
+          description: Aviso criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notice'
+        '400':
+          description: Dados inválidos
+
+  /notices/updateNoticeById/{id}:
+    put:
+      tags:
+        - Notices
+      summary: Atualiza um aviso (apenas ADMIN)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notice_title:
+                  type: string
+                notice_content:
+                  type: string
+                notice_date:
+                  type: string
+                  format: date
+                notice_status:
+                  type: integer
+                  enum: [0, 1, 2]
+                notice_priority:
+                  type: integer
+                  enum: [1, 2, 3, 4]
+      responses:
+        '200':
+          description: Aviso atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notice'
+        '404':
+          description: Aviso não encontrado
+
+  /notices/deleteNoticeById/{id}:
+    delete:
+      tags:
+        - Notices
+      summary: Exclusão lógica do aviso (apenas ADMIN)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Aviso desativado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '404':
+          description: Aviso não encontrado
+
+  # ==================== AVISOS PARA PROFESSORES ====================
+  /notices/teacher/{teacherId}:
+    get:
+      tags:
+        - TeacherNotices
+      summary: Lista avisos visíveis para um professor (inclui status de leitura)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: teacherId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lista de avisos com flag "viewed"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TeacherNotice'
+        '401':
+          description: Token inválido
+
+  /notices/markAsViewed/{noticeId}:
+    post:
+      tags:
+        - TeacherNotices
+      summary: Marca um aviso como lido por um professor
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: noticeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - teacher_id
+              properties:
+                teacher_id:
+                  type: integer
+                  example: 5
+      responses:
+        '200':
+          description: Aviso marcado como lido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '404':
+          description: Aviso ou professor não encontrado
+        '400':
+          description: Já foi visualizado ou dados inválidos
