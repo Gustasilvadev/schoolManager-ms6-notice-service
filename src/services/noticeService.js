@@ -60,30 +60,17 @@ const deleteNotice = async (id) => {
 };
 
 const getNoticesForTeacher = async (teacherId) => {
-  const allNotices = await noticeRepo.findAll(0, 1000, { notice_status: NOTICE_STATUS.ACTIVE });
-
-  const visibilities = await visibilityRepo.findVisibilitiesByTeacher(teacherId);
-  const viewedMap = new Map(); // notice_id -> viewed (true/false)
-  const restrictedNoticeIds = [];
-  for (const v of visibilities) {
-    restrictedNoticeIds.push(v.notice_id);
-    viewedMap.set(v.notice_id, v.notice_visibility_viewed_in !== null);
-  }
-
-  const visibleNotices = allNotices.filter(notice => {
-    const hasRestriction = notice.notice_visibilities && notice.notice_visibilities.length > 0;
-    if (hasRestriction) {
-      return restrictedNoticeIds.includes(notice.notice_id);
-    }
-    return true;
+  const notices = await noticeRepo.findVisibleForTeacher(teacherId, {
+    notice_status: NOTICE_STATUS.ACTIVE
   });
 
-  const noticesWithViewed = visibleNotices.map(notice => ({
-    ...notice,
-    viewed: viewedMap.get(notice.notice_id) || false
-  }));
-
-  return noticesWithViewed;
+  return notices.map(notice => {
+    const visibility = notice.notice_visibilities[0];
+    return {
+      ...notice,
+      viewed: visibility ? visibility.notice_visibility_viewed_in !== null : false
+    };
+  });
 };
 
 const markAsViewed = async (noticeId, teacherId) => {

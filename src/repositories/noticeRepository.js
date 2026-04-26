@@ -11,6 +11,24 @@ const findAll = async (skip, take, where = {}) => {
   });
 };
 
+const findVisibleForTeacher = async (teacherId, where = {}) => {
+  return await prisma.notices.findMany({
+    where: {
+      ...where,
+      OR: [
+        { notice_visibilities: { none: {} } },
+        { notice_visibilities: { some: { teacher_id: teacherId } } }
+      ]
+    },
+    orderBy: { notice_date: 'desc' },
+    include: {
+      notice_visibilities: {
+        where: { teacher_id: teacherId }
+      }
+    }
+  });
+};
+
 const findById = async (id) => {
   return await prisma.notices.findUnique({
     where: { notice_id: id },
@@ -42,6 +60,7 @@ const count = async (where = {}) => {
 
 module.exports = {
   findAll,
+  findVisibleForTeacher,
   findById,
   create,
   update,

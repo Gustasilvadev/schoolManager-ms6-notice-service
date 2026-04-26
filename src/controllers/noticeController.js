@@ -1,5 +1,5 @@
 const noticeService = require('../services/noticeService');
-const { HTTP_STATUS, MESSAGES } = require('../utils/constants');
+const { HTTP_STATUS, MESSAGES, ROLES } = require('../utils/constants');
 
 const createNotice = async (req, res, next) => {
   try {
@@ -66,8 +66,11 @@ const deleteNotice = async (req, res, next) => {
 
 const getNoticesForTeacher = async (req, res, next) => {
   try {
-    const { teacherId } = req.params;
-    const notices = await noticeService.getNoticesForTeacher(parseInt(teacherId));
+    const requestedTeacherId = parseInt(req.params.teacherId);
+    if (req.user.role !== ROLES.ADMIN && requestedTeacherId !== req.user.teacher_id) {
+      return res.status(HTTP_STATUS.FORBIDDEN).json({ error: MESSAGES.FORBIDDEN });
+    }
+    const notices = await noticeService.getNoticesForTeacher(requestedTeacherId);
     return res.status(HTTP_STATUS.OK).json(notices);
   } catch (error) {
     next(error);
@@ -76,9 +79,22 @@ const getNoticesForTeacher = async (req, res, next) => {
 
 const markAsViewed = async (req, res, next) => {
   try {
-    const { noticeId } = req.params;
-    const { teacher_id } = req.body;
-    await noticeService.markAsViewed(parseInt(noticeId), teacher_id);
+    const noticeId = parseInt(req.params.noticeId);
+    // Sempre usa o teacher_id do JWT — ignora qualquer valor vindo do body
+    // para evitar IDOR (TEACHER A marcando aviso destinado a TEACHER B).
+    let teacherId;
+    if (req.user.role === ROLES.ADMIN) {
+      teacherId = req.body?.teacher_id;
+      if (!teacherId) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'teacher_id obrigatório quando ADMIN' });
+      }
+    } else {
+      if (!req.user.teacher_id) {
+        return res.status(HTTP_STATUS.FORBIDDEN).json({ error: MESSAGES.FORBIDDEN });
+      }
+      teacherId = req.user.teacher_id;
+    }
+    await noticeService.markAsViewed(noticeId, teacherId);
     return res.status(HTTP_STATUS.OK).json({ message: 'Aviso marcado como lido' });
   } catch (error) {
     if (error.message === MESSAGES.NOTICE_NOT_FOUND || error.message === MESSAGES.TEACHER_NOT_FOUND) {
