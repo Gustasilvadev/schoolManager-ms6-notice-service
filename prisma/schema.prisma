@@ -8,11 +8,11 @@ datasource db {
 }
 
 model notice_visibilities {
-  notice_visibility_id        Int      @id @default(autoincrement())
+  notice_visibility_id        Int       @id @default(autoincrement())
   notice_id                   Int
   teacher_id                  Int
-  notice_visibility_viewed_in DateTime @default(now()) @db.Timestamp(0)
-  notices                     notices  @relation(fields: [notice_id], references: [notice_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_notice_visibilities_key_1")
+  notice_visibility_viewed_in DateTime? @default(now()) @db.Timestamp(0)
+  notices                     notices   @relation(fields: [notice_id], references: [notice_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_notice_visibilities_key_1")
 
   @@index([notice_id], map: "fk_notice_visibilities_key_1_idx")
 }
