@@ -1,3 +1,4 @@
+const prisma = require('../config/prisma');
 const noticeRepo = require('../repositories/noticeRepository');
 const visibilityRepo = require('../repositories/noticeVisibilityRepository');
 const { NOTICE_STATUS, NOTICE_PRIORITY, MESSAGES } = require('../utils/constants');
@@ -17,14 +18,18 @@ const createNotice = async (data, teacherIds = null) => {
     notice_status: data.notice_status !== undefined ? data.notice_status : NOTICE_STATUS.ACTIVE,
     notice_priority: data.notice_priority || NOTICE_PRIORITY.MEDIUM
   };
-  const newNotice = await noticeRepo.create(noticeData);
 
   if (teacherIds && teacherIds.length > 0) {
-    for (const teacherId of teacherIds) {
-      await visibilityRepo.addVisibility(newNotice.notice_id, teacherId);
-    }
+    return await prisma.$transaction(async (tx) => {
+      const created = await noticeRepo.create(noticeData, tx);
+      for (const teacherId of teacherIds) {
+        await visibilityRepo.addVisibility(created.notice_id, teacherId, tx);
+      }
+      return created;
+    });
   }
-  return newNotice;
+
+  return await noticeRepo.create(noticeData);
 };
 
 const getAllNotices = async (filters = {}, page = 1, limit = 10) => {

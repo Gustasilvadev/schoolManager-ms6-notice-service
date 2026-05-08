@@ -1,7 +1,7 @@
 const prisma = require('../config/prisma');
 
-const addVisibility = async (noticeId, teacherId) => {
-  return await prisma.notice_visibilities.create({
+const addVisibility = async (noticeId, teacherId, tx = prisma) => {
+  return await tx.notice_visibilities.create({
     data: {
       notice_id: noticeId,
       teacher_id: teacherId

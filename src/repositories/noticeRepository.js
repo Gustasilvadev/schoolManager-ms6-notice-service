@@ -36,8 +36,8 @@ const findById = async (id) => {
   });
 };
 
-const create = async (data) => {
-  return await prisma.notices.create({ data });
+const create = async (data, tx = prisma) => {
+  return await tx.notices.create({ data });
 };
 
 const update = async (id, data) => {
