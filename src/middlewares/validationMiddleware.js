@@ -9,7 +9,6 @@ const validate = (req, res, next) => {
   next();
 };
 
-// Criação de aviso
 const validateCreateNotice = [
   body('notice_title')
     .notEmpty().withMessage('Título é obrigatório')
@@ -32,7 +31,6 @@ const validateCreateNotice = [
   validate
 ];
 
-// Atualização de aviso
 const validateUpdateNotice = [
   param('id').isInt({ min: 1 }).withMessage('ID inválido'),
   body('notice_title')

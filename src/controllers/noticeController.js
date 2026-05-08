@@ -80,8 +80,6 @@ const getNoticesForTeacher = async (req, res, next) => {
 const markAsViewed = async (req, res, next) => {
   try {
     const noticeId = parseInt(req.params.noticeId);
-    // Sempre usa o teacher_id do JWT — ignora qualquer valor vindo do body
-    // para evitar IDOR (TEACHER A marcando aviso destinado a TEACHER B).
     let teacherId;
     if (req.user.role === ROLES.ADMIN) {
       teacherId = req.body?.teacher_id;
