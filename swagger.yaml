@@ -10,8 +10,10 @@ info:
     email: suporte@schoolmanager.com
 
 servers:
+  - url: http://localhost:3000/api
+    description: Via API Gateway (recomendado — valida JWT, CORS, rate limit)
   - url: http://localhost:3006/api
-    description: Servidor de Desenvolvimento
+    description: Direto no MS6 (somente desenvolvimento)
 
 tags:
   - name: Health
