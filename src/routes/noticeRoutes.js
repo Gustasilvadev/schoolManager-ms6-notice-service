@@ -11,13 +11,16 @@ const {
 
 router.use(authMiddleware);
 
-router.post('/createNotice', roleMiddleware(['ADMIN']), validateCreateNotice, noticeController.createNotice);
-router.get('/listNotices', roleMiddleware(['ADMIN']), noticeController.getAllNotices);
-router.get('/listNoticeById/:id', roleMiddleware(['ADMIN']), noticeController.getNoticeById);
-router.put('/updateNoticeById/:id', roleMiddleware(['ADMIN']), validateUpdateNotice, noticeController.updateNotice);
-router.delete('/deleteNoticeById/:id', roleMiddleware(['ADMIN']), noticeController.deleteNotice);
+const ADMIN_ONLY = roleMiddleware(['ADMIN']);
+const ADMIN_OR_TEACHER = roleMiddleware(['ADMIN', 'TEACHER']);
 
-router.get('/teacher/:teacherId', roleMiddleware(['TEACHER', 'ADMIN']), noticeController.getNoticesForTeacher);
-router.post('/markAsViewed/:noticeId', roleMiddleware(['TEACHER', 'ADMIN']), validateMarkAsViewed, noticeController.markAsViewed);
+router.post('/createNotice', ADMIN_ONLY, validateCreateNotice, noticeController.createNotice);
+router.get('/listNotices', ADMIN_ONLY, noticeController.getAllNotices);
+router.get('/listNoticeById/:id', ADMIN_ONLY, noticeController.getNoticeById);
+router.put('/updateNoticeById/:id', ADMIN_ONLY, validateUpdateNotice, noticeController.updateNotice);
+router.delete('/deleteNoticeById/:id', ADMIN_ONLY, noticeController.deleteNotice);
+
+router.get('/teacher/:teacherId', ADMIN_OR_TEACHER, noticeController.getNoticesForTeacher);
+router.post('/markAsViewed/:noticeId', ADMIN_OR_TEACHER, validateMarkAsViewed, noticeController.markAsViewed);
 
 module.exports = router;
