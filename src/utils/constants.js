@@ -33,6 +33,7 @@ module.exports = {
     TEACHER_NOT_FOUND: 'Professor não encontrado',
     ALREADY_VIEWED: 'Aviso já foi visualizado por este professor',
     INVALID_DATA: 'Dados inválidos',
-    REQUIRED_FIELD: 'Campo obrigatório não preenchido'
+    REQUIRED_FIELD: 'Campo obrigatório não preenchido',
+    EXTERNAL_SERVICE_UNAVAILABLE: 'Serviço externo indisponível'
   }
 };

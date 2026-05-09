@@ -1,9 +1,10 @@
 const prisma = require('../config/prisma');
 const noticeRepo = require('../repositories/noticeRepository');
 const visibilityRepo = require('../repositories/noticeVisibilityRepository');
+const { findTeacherById } = require('../utils/teachersClient');
 const { NOTICE_STATUS, NOTICE_PRIORITY, MESSAGES } = require('../utils/constants');
 
-const createNotice = async (data, teacherIds = null) => {
+const createNotice = async (data, teacherIds = null, authToken = null) => {
   let noticeDate = data.notice_date;
   if (noticeDate && typeof noticeDate === 'string' && noticeDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
     noticeDate = new Date(noticeDate + 'T00:00:00Z');
@@ -20,6 +21,11 @@ const createNotice = async (data, teacherIds = null) => {
   };
 
   if (teacherIds && teacherIds.length > 0) {
+    for (const teacherId of teacherIds) {
+      const teacher = await findTeacherById(teacherId, authToken);
+      if (!teacher) throw new Error(MESSAGES.TEACHER_NOT_FOUND);
+    }
+
     return await prisma.$transaction(async (tx) => {
       const created = await noticeRepo.create(noticeData, tx);
       for (const teacherId of teacherIds) {

@@ -4,9 +4,15 @@ const { HTTP_STATUS, MESSAGES, ROLES } = require('../utils/constants');
 const createNotice = async (req, res, next) => {
   try {
     const { teacher_ids, ...noticeData } = req.body;
-    const newNotice = await noticeService.createNotice(noticeData, teacher_ids);
+    const newNotice = await noticeService.createNotice(noticeData, teacher_ids, req.headers.authorization);
     return res.status(HTTP_STATUS.CREATED).json(newNotice);
   } catch (error) {
+    if (error.message === MESSAGES.TEACHER_NOT_FOUND) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ error: error.message });
+    }
+    if (error.message === MESSAGES.EXTERNAL_SERVICE_UNAVAILABLE) {
+      return res.status(503).json({ error: error.message });
+    }
     next(error);
   }
 };
