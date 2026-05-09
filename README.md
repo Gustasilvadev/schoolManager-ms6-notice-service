@@ -62,6 +62,8 @@ Todos os endpoints (exceto `/health`) exigem um token JWT válido no header:
 
 **Observação:** O campo `teacher_ids` é opcional. Se omitido, o aviso é visível a todos os professores. Se fornecido, apenas os professores com os IDs listados poderão vê-lo.
 
+> **Validação cruzada:** quando `teacher_ids` é informado, cada ID é validado no MS3 via Token Propagation (chamada `GET /api/teachers/listTeacherById/{id}` com o `Authorization` do ADMIN propagado). Se algum `teacher_id` não existir, o `createNotice` retorna `404 TEACHER_NOT_FOUND` e nenhum aviso é gravado. Se o MS3 estiver indisponível/timeout, retorna `503 EXTERNAL_SERVICE_UNAVAILABLE`.
+
 ---
 
 ## 👩‍🏫 Avisos – Professores (ADMIN ou TEACHER)
@@ -69,7 +71,7 @@ Todos os endpoints (exceto `/health`) exigem um token JWT válido no header:
 | Método | Endpoint | Descrição | Body (exemplo) |
 |--------|----------|-----------|----------------|
 | GET | `/notices/teacher/{teacherId}` | Lista avisos visíveis para um professor (inclui campo `viewed` indicando se já foi lido) | — |
-| POST | `/notices/markAsViewed/{noticeId}` | Marca um aviso como lido pelo professor | `{ "teacher_id": 1 }` |
+| POST | `/notices/markAsViewed/{noticeId}` | Marca um aviso como lido pelo professor | TEACHER: sem body (usa `teacher_id` do JWT). ADMIN: `{ "teacher_id": <id> }` obrigatório. |
 
 ---
 

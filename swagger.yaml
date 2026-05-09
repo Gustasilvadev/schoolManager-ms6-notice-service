@@ -243,9 +243,9 @@ paths:
                 teacher_ids:
                   type: array
                   description: "Lista opcional de IDs de professores que terão visibilidade restrita. Se não enviado, aviso visível a todos."
+                  example: [5, 8, 12]
                   items:
                     type: integer
-                    example: [5, 8, 12]
       responses:
         '201':
           description: Aviso criado
