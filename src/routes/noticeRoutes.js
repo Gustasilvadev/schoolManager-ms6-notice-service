@@ -19,6 +19,7 @@ router.get('/listNotices', ADMIN_ONLY, noticeController.getAllNotices);
 router.get('/listNoticeById/:id', ADMIN_ONLY, noticeController.getNoticeById);
 router.put('/updateNoticeById/:id', ADMIN_ONLY, validateUpdateNotice, noticeController.updateNotice);
 router.delete('/deleteNoticeById/:id', ADMIN_ONLY, noticeController.deleteNotice);
+router.post('/restoreNoticeById/:id', ADMIN_ONLY, noticeController.restoreNotice);
 
 router.get('/teacher/:teacherId', ADMIN_OR_TEACHER, noticeController.getNoticesForTeacher);
 router.post('/markAsViewed/:noticeId', ADMIN_OR_TEACHER, validateMarkAsViewed, noticeController.markAsViewed);

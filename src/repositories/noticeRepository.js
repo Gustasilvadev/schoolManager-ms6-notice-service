@@ -54,6 +54,13 @@ const softDelete = async (id) => {
   });
 };
 
+const restore = async (id) => {
+  return await prisma.notices.update({
+    where: { notice_id: id },
+    data: { notice_status: NOTICE_STATUS.ACTIVE }
+  });
+};
+
 const count = async (where = {}) => {
   return await prisma.notices.count({ where });
 };
@@ -65,5 +72,6 @@ module.exports = {
   create,
   update,
   softDelete,
+  restore,
   count
 };

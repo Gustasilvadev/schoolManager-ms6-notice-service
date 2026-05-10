@@ -34,6 +34,9 @@ module.exports = {
     ALREADY_VIEWED: 'Aviso já foi visualizado por este professor',
     INVALID_DATA: 'Dados inválidos',
     REQUIRED_FIELD: 'Campo obrigatório não preenchido',
-    EXTERNAL_SERVICE_UNAVAILABLE: 'Serviço externo indisponível'
+    EXTERNAL_SERVICE_UNAVAILABLE: 'Serviço externo indisponível',
+    CANNOT_EDIT_DELETED: 'Não é possível editar um aviso excluído',
+    NOT_DELETED_CANNOT_RESTORE: 'O registro não está excluído',
+    NOTICE_RESTORED: 'Aviso restaurado com sucesso'
   }
 };

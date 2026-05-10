@@ -19,12 +19,13 @@ const createNotice = async (req, res, next) => {
 
 const getAllNotices = async (req, res, next) => {
   try {
-    const { page = 1, limit = 10, notice_title, notice_status, notice_priority } = req.query;
+    const { page = 1, limit = 10, notice_title, notice_status, notice_priority, includeDeleted } = req.query;
     const filters = {};
     if (notice_title) filters.notice_title = notice_title;
     if (notice_status !== undefined) filters.notice_status = parseInt(notice_status);
     if (notice_priority) filters.notice_priority = parseInt(notice_priority);
-    const result = await noticeService.getAllNotices(filters, parseInt(page), parseInt(limit));
+    if (includeDeleted === 'true') filters.includeDeleted = true;
+    const result = await noticeService.getAllNotices(filters, parseInt(page), parseInt(limit), req.user.role);
     return res.status(HTTP_STATUS.OK).json(result);
   } catch (error) {
     next(error);
@@ -52,6 +53,28 @@ const updateNotice = async (req, res, next) => {
   } catch (error) {
     if (error.message === MESSAGES.NOTICE_NOT_FOUND) {
       return res.status(HTTP_STATUS.NOT_FOUND).json({ error: error.message });
+    }
+    if (error.message === MESSAGES.CANNOT_EDIT_DELETED) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: error.message });
+    }
+    next(error);
+  }
+};
+
+const restoreNotice = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const restored = await noticeService.restoreNotice(parseInt(id));
+    return res.status(HTTP_STATUS.OK).json({
+      message: MESSAGES.NOTICE_RESTORED,
+      notice: restored
+    });
+  } catch (error) {
+    if (error.message === MESSAGES.NOTICE_NOT_FOUND) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ error: error.message });
+    }
+    if (error.message === MESSAGES.NOT_DELETED_CANNOT_RESTORE) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: error.message });
     }
     next(error);
   }
@@ -114,6 +137,7 @@ module.exports = {
   getNoticeById,
   updateNotice,
   deleteNotice,
+  restoreNotice,
   getNoticesForTeacher,
   markAsViewed
 };

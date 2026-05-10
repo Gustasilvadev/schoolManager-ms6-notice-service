@@ -2,7 +2,7 @@ const prisma = require('../config/prisma');
 const noticeRepo = require('../repositories/noticeRepository');
 const visibilityRepo = require('../repositories/noticeVisibilityRepository');
 const { findTeacherById } = require('../utils/teachersClient');
-const { NOTICE_STATUS, NOTICE_PRIORITY, MESSAGES } = require('../utils/constants');
+const { NOTICE_STATUS, NOTICE_PRIORITY, MESSAGES, ROLES } = require('../utils/constants');
 
 const createNotice = async (data, teacherIds = null, authToken = null) => {
   let noticeDate = data.notice_date;
@@ -38,12 +38,19 @@ const createNotice = async (data, teacherIds = null, authToken = null) => {
   return await noticeRepo.create(noticeData);
 };
 
-const getAllNotices = async (filters = {}, page = 1, limit = 10) => {
+const getAllNotices = async (filters = {}, page = 1, limit = 10, userRole = ROLES.ADMIN) => {
   const skip = (page - 1) * limit;
   const where = {};
   if (filters.notice_title) where.notice_title = { contains: filters.notice_title };
-  if (filters.notice_status !== undefined) where.notice_status = filters.notice_status;
   if (filters.notice_priority) where.notice_priority = filters.notice_priority;
+
+  if (userRole === ROLES.TEACHER) {
+    where.notice_status = NOTICE_STATUS.ACTIVE;
+  } else if (filters.notice_status !== undefined) {
+    where.notice_status = filters.notice_status;
+  } else if (filters.includeDeleted !== true) {
+    where.notice_status = { in: [NOTICE_STATUS.ACTIVE, NOTICE_STATUS.INACTIVE] };
+  }
 
   const notices = await noticeRepo.findAll(skip, limit, where);
   const total = await noticeRepo.count(where);
@@ -59,6 +66,9 @@ const getNoticeById = async (id) => {
 const updateNotice = async (id, updateData) => {
   const existing = await noticeRepo.findById(id);
   if (!existing) throw new Error(MESSAGES.NOTICE_NOT_FOUND);
+  if (existing.notice_status === NOTICE_STATUS.DELETED) {
+    throw new Error(MESSAGES.CANNOT_EDIT_DELETED);
+  }
   const updated = await noticeRepo.update(id, updateData);
   return updated;
 };
@@ -68,6 +78,15 @@ const deleteNotice = async (id) => {
   if (!existing) throw new Error(MESSAGES.NOTICE_NOT_FOUND);
   await noticeRepo.softDelete(id);
   return true;
+};
+
+const restoreNotice = async (id) => {
+  const existing = await noticeRepo.findById(id);
+  if (!existing) throw new Error(MESSAGES.NOTICE_NOT_FOUND);
+  if (existing.notice_status !== NOTICE_STATUS.DELETED) {
+    throw new Error(MESSAGES.NOT_DELETED_CANNOT_RESTORE);
+  }
+  return await noticeRepo.restore(id);
 };
 
 const getNoticesForTeacher = async (teacherId) => {
@@ -99,6 +118,7 @@ module.exports = {
   getNoticeById,
   updateNotice,
   deleteNotice,
+  restoreNotice,
   getNoticesForTeacher,
   markAsViewed
 };
