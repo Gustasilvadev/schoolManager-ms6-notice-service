@@ -163,6 +163,14 @@ paths:
           schema:
             type: integer
             enum: [0, 1, 2]
+          description: |
+            Filtro fino por status. Sem este parâmetro, ADMIN recebe ACTIVE+INACTIVE.
+        - name: includeDeleted
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Quando `true`, inclui avisos com status DELETED (2). Apenas ADMIN.
         - name: notice_priority
           in: query
           schema:
@@ -296,6 +304,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Notice'
+        '400':
+          description: |
+            Aviso está deletado (status=2). Use
+            `POST /notices/restoreNoticeById/{id}` para reativar.
         '404':
           description: Aviso não encontrado
 
@@ -322,6 +334,41 @@ paths:
                 properties:
                   message:
                     type: string
+        '404':
+          description: Aviso não encontrado
+
+  /notices/restoreNoticeById/{id}:
+    post:
+      tags:
+        - Notices
+      summary: Restaura aviso deletado (apenas ADMIN)
+      description: Promove status DELETED (2) → ACTIVE (1). Endpoint dedicado para reativação consciente.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Aviso restaurado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  notice:
+                    $ref: '#/components/schemas/Notice'
+        '400':
+          description: Aviso não está deletado (nada a restaurar)
+        '401':
+          description: Não autenticado
+        '403':
+          description: Acesso negado (requer ADMIN)
         '404':
           description: Aviso não encontrado
 

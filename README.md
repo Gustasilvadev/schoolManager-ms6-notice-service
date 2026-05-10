@@ -55,10 +55,11 @@ Todos os endpoints (exceto `/health`) exigem um token JWT válido no header:
 | Método | Endpoint | Descrição | Body (exemplo) |
 |--------|----------|-----------|----------------|
 | POST | `/notices/createNotice` | Cria um novo aviso (pode definir `teacher_ids` para visibilidade restrita) | `{ "notice_title": "Reunião", "notice_content": "...", "notice_date": "2026-04-18", "notice_priority": 2, "teacher_ids": [1,2] }` |
-| GET | `/notices/listNotices` | Lista todos os avisos (com paginação e filtros) | — |
+| GET | `/notices/listNotices` | Lista avisos. ADMIN: ACTIVE+INACTIVE (use `?includeDeleted=true`/`?notice_status=N`). | — |
 | GET | `/notices/listNoticeById/{id}` | Busca um aviso pelo ID | — |
-| PUT | `/notices/updateNoticeById/{id}` | Atualiza dados de um aviso | `{ "notice_title": "...", "notice_status": 1 }` |
-| DELETE | `/notices/deleteNoticeById/{id}` | Exclusão lógica do aviso | — |
+| PUT | `/notices/updateNoticeById/{id}` | Atualiza aviso (bloqueado se status=DELETED) | `{ "notice_title": "...", "notice_status": 1 }` |
+| DELETE | `/notices/deleteNoticeById/{id}` | Exclusão lógica do aviso (status=2) | — |
+| POST | `/notices/restoreNoticeById/{id}` | Restaura aviso deletado (status: 2 → 1) | — |
 
 **Observação:** O campo `teacher_ids` é opcional. Se omitido, o aviso é visível a todos os professores. Se fornecido, apenas os professores com os IDs listados poderão vê-lo.
 
