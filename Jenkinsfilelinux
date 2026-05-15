@@ -33,7 +33,7 @@ pipeline {
 
                     sh "docker stop ${appName} || exit 0"
                     sh "docker rm -v ${appName} || exit 0"
-                    sh "docker run -d --name ${appName} -p 9516:9516 ${imageTag}"
+                    sh "docker run -d --name ${appName} -p 9516:9516 --env-file .env ${imageTag}"
                 }
             }
         }
@@ -41,10 +41,10 @@ pipeline {
 
     post {
         success {
-            echo 'Deploy realizado com sucesso!'
+            echo 'Deploy do MS6 (Notice Service) realizado com sucesso!'
         }
         failure {
-            echo 'Houve um erro durante o deploy.'
+            echo 'Houve um erro durante o deploy do MS6.'
         }
     }
 }
