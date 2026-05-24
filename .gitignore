@@ -1,1 +1,5 @@
 /node_modules
+# Frontend
+notice-frontend/node_modules/
+notice-frontend/dist/
+notice-frontend/.env
