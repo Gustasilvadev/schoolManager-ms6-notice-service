@@ -263,6 +263,16 @@ paths:
                 $ref: '#/components/schemas/Notice'
         '400':
           description: Dados inválidos
+        '401':
+          description: Token inválido ou ausente
+        '403':
+          description: Acesso negado (requer ADMIN)
+        '404':
+          description: |
+            Algum `teacher_id` informado não existe no MS3 (TeacherService).
+            Nenhum aviso é gravado (validação cruzada via Token Propagation).
+        '503':
+          description: MS3 (TeacherService) indisponível ou timeout durante a validação dos `teacher_ids`.
 
   /notices/updateNoticeById/{id}:
     put:
@@ -397,12 +407,20 @@ paths:
                   $ref: '#/components/schemas/TeacherNotice'
         '401':
           description: Token inválido
+        '403':
+          description: |
+            Acesso negado. Um TEACHER só pode consultar os próprios avisos
+            (o `teacherId` do path deve coincidir com o `teacher_id` do JWT). ADMIN pode consultar qualquer professor.
 
   /notices/markAsViewed/{noticeId}:
     post:
       tags:
         - TeacherNotices
       summary: Marca um aviso como lido por um professor
+      description: |
+        Comportamento por papel:
+        - **TEACHER**: o professor é identificado pelo `teacher_id` contido no JWT (marca como lido para si mesmo).
+        - **ADMIN**: deve informar `teacher_id` no corpo da requisição para indicar por qual professor o aviso será marcado.
       security:
         - bearerAuth: []
       parameters:
@@ -412,16 +430,15 @@ paths:
           schema:
             type: integer
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
               type: object
-              required:
-                - teacher_id
               properties:
                 teacher_id:
                   type: integer
+                  description: Obrigatório quando o solicitante é ADMIN. Ignorado para TEACHER (usa o JWT).
                   example: 5
       responses:
         '200':
@@ -433,7 +450,11 @@ paths:
                 properties:
                   message:
                     type: string
-        '404':
-          description: Aviso ou professor não encontrado
         '400':
-          description: Já foi visualizado ou dados inválidos
+          description: ADMIN sem `teacher_id` no corpo, ou dados inválidos
+        '401':
+          description: Token inválido ou ausente
+        '403':
+          description: TEACHER sem `teacher_id` no JWT
+        '404':
+          description: Aviso não encontrado, ou professor sem visibilidade sobre o aviso

@@ -23,7 +23,131 @@ Este microsserviço possui seu domínio de dados totalmente isolado, utilizando 
 
 ---
 
-## 3. Padrão de Commits
+## 3. Stack Tecnológica
+
+| Camada | Tecnologia |
+|--------|-----------|
+| Runtime | Node.js 20 |
+| Framework | Express 5 |
+| ORM | Prisma 5 (`@prisma/client`) |
+| Banco de Dados | MySQL / MariaDB |
+| Autenticação | JWT (`jsonwebtoken`) – tokens gerados pelo MS1 (AuthService) |
+| Validação | `express-validator` |
+| Documentação | Swagger UI (`swagger-ui-express` + `yamljs`) |
+| Configuração | `dotenv` / Infisical (segredos em produção) |
+| Container | Docker (Node 20 Alpine) |
+| CI/CD | Jenkins (`Jenkinsfile`) |
+
+---
+
+## 4. Estrutura do Projeto
+
+```
+src/
+├── config/        # prisma.js (instância do PrismaClient)
+├── controllers/   # noticeController.js – requisição/resposta
+├── services/      # noticeService.js – regras de negócio
+├── repositories/  # noticeRepository.js, noticeVisibilityRepository.js – acesso ao banco
+├── middlewares/   # authMiddleware, roleMiddleware, validationMiddleware, errorHandler
+├── routes/        # index.js (+ /health), noticeRoutes.js
+├── utils/         # constants.js, jwtHelper.js, teachersClient.js
+└── server.js      # bootstrap do Express + Swagger
+prisma/
+└── schema.prisma  # modelos notices e notice_visibilities
+swagger.yaml       # especificação OpenAPI 3.0
+```
+
+---
+
+## 5. Variáveis de Ambiente
+
+Em **desenvolvimento**, defina as variáveis abaixo em um arquivo `.env` na raiz. Em **produção**, os segredos são injetados via **Infisical** (ver seção 7).
+
+| Variável | Obrigatória | Descrição | Exemplo |
+|----------|:----------:|-----------|---------|
+| `DATABASE_URL` | ✅ | String de conexão MySQL/MariaDB usada pelo Prisma | `mysql://user:senha@localhost:3306/20261prj5_school_manager_notice` |
+| `JWT_SECRET` | ✅ | Segredo para validar tokens JWT emitidos pelo MS1 | `CHAVE_AQUI` |
+| `PORT` | ❌ | Porta HTTP do serviço (padrão `3006`) | `3006` |
+| `TEACHER_SERVICE_URL` | ✅* | Base URL do MS3 (TeacherService) para validação cruzada de `teacher_ids` | `http://localhost:3003/api` |
+| `TEACHER_SERVICE_TIMEOUT_MS` | ❌ | Timeout (ms) das chamadas ao MS3 (padrão `3000`) | `3000` |
+| `SERVER_URL` | ❌ | Sobrescreve a URL exibida no Swagger UI | `https://api.schoolmanager.com` |
+
+> *`TEACHER_SERVICE_URL` só é exigida quando avisos são criados com `teacher_ids` (visibilidade restrita). Sem ela, a criação restrita falha com `TEACHER_SERVICE_URL não configurado`.
+
+---
+
+## 6. Instalação e Execução (local)
+
+**Pré-requisitos:** Node.js 20+, MySQL/MariaDB acessível e o banco do domínio já criado (ver `script_schoolManager.sql` no repositório principal).
+
+```bash
+# 1. Instalar dependências
+npm ci
+
+# 2. Configurar variáveis de ambiente (criar .env conforme seção 5)
+
+# 3. Gerar o Prisma Client
+npx prisma generate
+
+# 4. Iniciar o serviço
+npm run start    # produção (node)
+npm run dev      # desenvolvimento (nodemon, hot-reload)
+```
+
+Após subir, o serviço fica disponível em `http://localhost:3006/api` e a documentação em `http://localhost:3006/api-docs`.
+
+---
+
+## 7. Docker e CI/CD
+
+**Build/execução com Docker:**
+```bash
+docker compose up --build
+```
+O `Dockerfile` usa build multi-stage (Node 20 Alpine), gera o Prisma Client e, no estágio final, executa o serviço via **Infisical**, que injeta os segredos do ambiente `prod` (path `/ms6-notice-service`) em tempo de execução. O container expõe a porta **9516**.
+
+**Infisical** – o `.env` versionado contém apenas as credenciais de autenticação do Infisical (não os segredos da aplicação):
+`INFISICAL_PROJECT_ID`, `INFISICAL_UNIVERSAL_AUTH_CLIENT_ID`, `INFISICAL_UNIVERSAL_AUTH_CLIENT_SECRET`, `INFISICAL_API_URL`.
+
+**Jenkins** – o `Jenkinsfile` define o pipeline: checkout do `main` → `npm ci` + `npx prisma generate` → `docker build` → deploy (`docker run -p 9516:9516`).
+
+---
+
+## 8. Banco de Dados
+
+Domínio isolado com duas tabelas (ver `prisma/schema.prisma`):
+
+**`notices`**
+| Coluna | Tipo | Observação |
+|--------|------|-----------|
+| `notice_id` | INT (PK, auto-increment) | |
+| `notice_title` | VARCHAR(45) | obrigatório |
+| `notice_content` | VARCHAR(255) | obrigatório |
+| `notice_date` | DATE | |
+| `notice_status` | INT | `0`=inativo, `1`=ativo, `2`=deletado |
+| `notice_priority` | INT | `1`=baixa, `2`=média, `3`=alta, `4`=urgente |
+
+**`notice_visibilities`** (visibilidade restrita + rastreamento de leitura)
+| Coluna | Tipo | Observação |
+|--------|------|-----------|
+| `notice_visibility_id` | INT (PK, auto-increment) | |
+| `notice_id` | INT (FK → notices) | |
+| `teacher_id` | INT | ID lógico do professor (MS3) |
+| `notice_visibility_viewed_in` | TIMESTAMP NULL | `NULL` = ainda não lido |
+
+> **Regra de visibilidade:** um aviso é visível a um professor quando **não possui registros em `notice_visibilities`** (visível a todos) **ou** quando há um registro com o `teacher_id` dele. O campo `viewed` é calculado como `notice_visibility_viewed_in IS NOT NULL`.
+
+---
+
+## 9. Documentação Interativa (Swagger)
+
+A especificação OpenAPI 3.0 fica em [`swagger.yaml`](swagger.yaml) e é servida em tempo de execução:
+
+- **Swagger UI:** `http://localhost:3006/api-docs`
+
+---
+
+## 10. Padrão de Commits
 
 Para mantermos o histórico limpo e rastreável, este projeto utiliza a especificação conforme os exemplos abaixo.
 

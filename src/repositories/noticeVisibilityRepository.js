@@ -4,7 +4,8 @@ const addVisibility = async (noticeId, teacherId, tx = prisma) => {
   return await tx.notice_visibilities.create({
     data: {
       notice_id: noticeId,
-      teacher_id: teacherId
+      teacher_id: teacherId,
+      notice_visibility_viewed_in: null
     }
   });
 };
