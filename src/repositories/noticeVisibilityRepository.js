@@ -10,18 +10,6 @@ const addVisibility = async (noticeId, teacherId, tx = prisma) => {
   });
 };
 
-const markAsViewed = async (noticeId, teacherId) => {
-  return await prisma.notice_visibilities.updateMany({
-    where: {
-      notice_id: noticeId,
-      teacher_id: teacherId
-    },
-    data: {
-      notice_visibility_viewed_in: new Date()
-    }
-  });
-};
-
 const findVisibilitiesByNotice = async (noticeId) => {
   return await prisma.notice_visibilities.findMany({
     where: { notice_id: noticeId }
@@ -41,9 +29,28 @@ const findOne = async (noticeId, teacherId) => {
   });
 };
 
+const markViewed = async (noticeId, teacherId) => {
+  const existing = await prisma.notice_visibilities.findFirst({
+    where: { notice_id: noticeId, teacher_id: teacherId }
+  });
+  if (existing) {
+    return await prisma.notice_visibilities.updateMany({
+      where: { notice_id: noticeId, teacher_id: teacherId },
+      data: { notice_visibility_viewed_in: new Date() }
+    });
+  }
+  return await prisma.notice_visibilities.create({
+    data: {
+      notice_id: noticeId,
+      teacher_id: teacherId,
+      notice_visibility_viewed_in: new Date()
+    }
+  });
+};
+
 module.exports = {
   addVisibility,
-  markAsViewed,
+  markViewed,
   findVisibilitiesByNotice,
   findVisibilitiesByTeacher,
   findOne

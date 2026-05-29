@@ -106,9 +106,7 @@ const getNoticesForTeacher = async (teacherId) => {
 const markAsViewed = async (noticeId, teacherId) => {
   const notice = await noticeRepo.findById(noticeId);
   if (!notice) throw new Error(MESSAGES.NOTICE_NOT_FOUND);
-  const existing = await visibilityRepo.findOne(noticeId, teacherId);
-  if (!existing) throw new Error(MESSAGES.TEACHER_NOT_FOUND);
-  await visibilityRepo.markAsViewed(noticeId, teacherId);
+  await visibilityRepo.markViewed(noticeId, teacherId);
   return true;
 };
 
