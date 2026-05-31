@@ -48,10 +48,31 @@ const markViewed = async (noticeId, teacherId) => {
   });
 };
 
+const deleteByNotice = async (noticeId, tx = prisma) => {
+  return await tx.notice_visibilities.deleteMany({
+    where: {
+      notice_id: noticeId,
+    },
+  });
+};
+
+const addMany = async (noticeId, teacherIds, tx = prisma) => {
+  if (!teacherIds || teacherIds.length === 0) return;
+
+  return await tx.notice_visibilities.createMany({
+    data: teacherIds.map((teacherId) => ({
+      notice_id: noticeId,
+      teacher_id: teacherId,
+    })),
+  });
+};
+
 module.exports = {
   addVisibility,
+  addMany,
+  deleteByNotice,
   markViewed,
   findVisibilitiesByNotice,
   findVisibilitiesByTeacher,
-  findOne
+  findOne,
 };
