@@ -48,7 +48,13 @@ const getNoticeById = async (req, res, next) => {
 const updateNotice = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const updated = await noticeService.updateNotice(parseInt(id), req.body);
+
+    const updated = await noticeService.updateNotice(
+      parseInt(id),
+      req.body,
+      req.headers.authorization
+    );
+    
     return res.status(HTTP_STATUS.OK).json(updated);
   } catch (error) {
     if (error.message === MESSAGES.NOTICE_NOT_FOUND) {
@@ -56,6 +62,13 @@ const updateNotice = async (req, res, next) => {
     }
     if (error.message === MESSAGES.CANNOT_EDIT_DELETED) {
       return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: error.message });
+    }
+    if (error.message === MESSAGES.TEACHER_NOT_FOUND) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ error: error.message });
+    }
+    
+    if (error.message === MESSAGES.EXTERNAL_SERVICE_UNAVAILABLE) {
+      return res.status(503).json({ error: error.message });
     }
     next(error);
   }

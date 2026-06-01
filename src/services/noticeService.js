@@ -63,14 +63,46 @@ const getNoticeById = async (id) => {
   return notice;
 };
 
-const updateNotice = async (id, updateData) => {
+const updateNotice = async (id, updateData, authToken = null) => {
   const existing = await noticeRepo.findById(id);
+
   if (!existing) throw new Error(MESSAGES.NOTICE_NOT_FOUND);
+
   if (existing.notice_status === NOTICE_STATUS.DELETED) {
     throw new Error(MESSAGES.CANNOT_EDIT_DELETED);
   }
-  const updated = await noticeRepo.update(id, updateData);
-  return updated;
+
+  const { teacher_ids, ...noticeData } = updateData;
+
+  if (
+    noticeData.notice_date &&
+    typeof noticeData.notice_date === 'string' &&
+    noticeData.notice_date.match(/^\d{4}-\d{2}-\d{2}$/)
+  ) {
+    noticeData.notice_date = new Date(noticeData.notice_date + 'T00:00:00Z');
+  }
+
+  if (Array.isArray(teacher_ids) && teacher_ids.length > 0) {
+    for (const teacherId of teacher_ids) {
+      const teacher = await findTeacherById(teacherId, authToken);
+
+      if (!teacher) throw new Error(MESSAGES.TEACHER_NOT_FOUND);
+    }
+  }
+
+  return await prisma.$transaction(async (tx) => {
+    const updated = await noticeRepo.update(id, noticeData, tx);
+
+    if (Array.isArray(teacher_ids)) {
+      await visibilityRepo.deleteByNotice(id, tx);
+
+      if (teacher_ids.length > 0) {
+        await visibilityRepo.addMany(id, teacher_ids, tx);
+      }
+    }
+
+    return updated;
+  });
 };
 
 const deleteNotice = async (id) => {
@@ -106,9 +138,7 @@ const getNoticesForTeacher = async (teacherId) => {
 const markAsViewed = async (noticeId, teacherId) => {
   const notice = await noticeRepo.findById(noticeId);
   if (!notice) throw new Error(MESSAGES.NOTICE_NOT_FOUND);
-  const existing = await visibilityRepo.findOne(noticeId, teacherId);
-  if (!existing) throw new Error(MESSAGES.TEACHER_NOT_FOUND);
-  await visibilityRepo.markAsViewed(noticeId, teacherId);
+  await visibilityRepo.markViewed(noticeId, teacherId);
   return true;
 };
 

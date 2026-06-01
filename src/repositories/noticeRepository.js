@@ -40,10 +40,13 @@ const create = async (data, tx = prisma) => {
   return await tx.notices.create({ data });
 };
 
-const update = async (id, data) => {
-  return await prisma.notices.update({
+const update = async (id, data, tx = prisma) => {
+  return await tx.notices.update({
     where: { notice_id: id },
-    data
+    data,
+    include: {
+      notice_visibilities: true,
+    },
   });
 };
 
