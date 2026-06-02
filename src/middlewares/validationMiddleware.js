@@ -52,7 +52,8 @@ const validateUpdateNotice = [
 const validateMarkAsViewed = [
   param('noticeId').isInt({ min: 1 }).withMessage('ID do aviso inválido'),
   body('teacher_id')
-    .isInt({ min: 1 }).withMessage('ID do professor é obrigatório'),
+    .optional()
+    .isInt({ min: 1 }).withMessage('ID do professor inválido'),
   validate
 ];
 
