@@ -63,6 +63,7 @@ const addMany = async (noticeId, teacherIds, tx = prisma) => {
     data: teacherIds.map((teacherId) => ({
       notice_id: noticeId,
       teacher_id: teacherId,
+      notice_visibility_viewed_in: null,
     })),
   });
 };
