@@ -1,10 +1,42 @@
 const prisma = require('../config/prisma');
 const noticeRepo = require('../repositories/noticeRepository');
 const visibilityRepo = require('../repositories/noticeVisibilityRepository');
-const { findTeacherById } = require('../utils/teachersClient');
+const { findTeacherById, listAllTeachers } = require('../utils/teachersClient');
+const { sendNoticeCreatedEmail } = require('../utils/email/emailService');
 const { NOTICE_STATUS, NOTICE_PRIORITY, MESSAGES, ROLES } = require('../utils/constants');
 
-const createNotice = async (data, teacherIds = null, authToken = null) => {
+const notifyNoticeRecipients = async (notice, teacherIds, fetchedTeachers, authToken, sender) => {
+  try {
+    const recipients = (teacherIds && teacherIds.length > 0)
+      ? fetchedTeachers                       // reusa objetos já buscados na validação
+      : await listAllTeachers(authToken);     // broadcast: todos os professores ativos
+
+    const senderName = sender?.email || 'Coordenação';
+    const base = (process.env.FRONTEND_BASE_URL || 'http://academico3.rj.senac.br/20261prj5/schoolmanagement').replace(/\/$/, '');
+    const noticeUrl = `${base}${process.env.NOTICE_PATH || '/notices'}/${notice.notice_id}`;
+
+    const results = await Promise.allSettled(
+      recipients
+        .filter(t => t && t.teacher_email)
+        .map(t => sendNoticeCreatedEmail({
+          to: t.teacher_email,
+          recipientName: t.teacher_name,
+          senderName,
+          noticeTitle: notice.notice_title,
+          noticeUrl
+        }))
+    );
+
+    const failed = results.filter(r => r.status === 'rejected').length;
+    if (failed) {
+      console.error(`[MS6][email] ${failed}/${results.length} email(s) de comunicado falharam`);
+    }
+  } catch (err) {
+    console.error('[MS6][email] Falha ao enviar emails do comunicado:', err.message);
+  }
+};
+
+const createNotice = async (data, teacherIds = null, authToken = null, sender = null) => {
   let noticeDate = data.notice_date;
   if (noticeDate && typeof noticeDate === 'string' && noticeDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
     noticeDate = new Date(noticeDate + 'T00:00:00Z');
@@ -20,22 +52,30 @@ const createNotice = async (data, teacherIds = null, authToken = null) => {
     notice_priority: data.notice_priority || NOTICE_PRIORITY.MEDIUM
   };
 
+  let created;
+  const fetchedTeachers = [];
+
   if (teacherIds && teacherIds.length > 0) {
     for (const teacherId of teacherIds) {
       const teacher = await findTeacherById(teacherId, authToken);
       if (!teacher) throw new Error(MESSAGES.TEACHER_NOT_FOUND);
+      fetchedTeachers.push(teacher); // reaproveitado para o envio de email (tem email/nome)
     }
 
-    return await prisma.$transaction(async (tx) => {
-      const created = await noticeRepo.create(noticeData, tx);
+    created = await prisma.$transaction(async (tx) => {
+      const notice = await noticeRepo.create(noticeData, tx);
       for (const teacherId of teacherIds) {
-        await visibilityRepo.addVisibility(created.notice_id, teacherId, tx);
+        await visibilityRepo.addVisibility(notice.notice_id, teacherId, tx);
       }
-      return created;
+      return notice;
     });
+  } else {
+    created = await noticeRepo.create(noticeData);
   }
 
-  return await noticeRepo.create(noticeData);
+  await notifyNoticeRecipients(created, teacherIds, fetchedTeachers, authToken, sender);
+
+  return created;
 };
 
 const getAllNotices = async (filters = {}, page = 1, limit = 10, userRole = ROLES.ADMIN) => {

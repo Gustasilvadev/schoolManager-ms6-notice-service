@@ -43,4 +43,24 @@ const findTeacherById = async (teacherId, authToken) => {
   return await response.json();
 };
 
-module.exports = { findTeacherById };
+
+const listAllTeachers = async (authToken) => {
+  const url = buildUrl('/teachers/listTeachers?status=1&limit=1000');
+  let response;
+  try {
+    response = await fetchWithTimeout(url, authToken);
+  } catch (err) {
+    console.error(`[MS6->${SERVICE_NAME}] Falha ao consultar listTeachers:`, err.message);
+    throw new Error(MESSAGES.EXTERNAL_SERVICE_UNAVAILABLE);
+  }
+
+  if (!response.ok) {
+    console.error(`[MS6->${SERVICE_NAME}] listTeachers retornou HTTP ${response.status}`);
+    throw new Error(MESSAGES.EXTERNAL_SERVICE_UNAVAILABLE);
+  }
+
+  const data = await response.json();
+  return Array.isArray(data) ? data : (data.teachers || []);
+};
+
+module.exports = { findTeacherById, listAllTeachers };
